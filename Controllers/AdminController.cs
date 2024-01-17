@@ -34,12 +34,13 @@ namespace BigBasketApplication.Controllers
         
 
         [HttpPost("PostNewProduct")]
-        public async Task<ActionResult> PostNewProduct(Product product)
+        public async Task<ActionResult<Product>> PostNewProduct(Product product)
         {
             try
             {
-                await _repository.PostNewProduct(product);
-                return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
+                var postedProduct = await _repository.PostNewProduct(product);
+                return Ok(postedProduct);
+                
             }
             catch (Exception ex)
             {
@@ -64,8 +65,23 @@ namespace BigBasketApplication.Controllers
 
         }
 
-        
+        [HttpPut("UpdateTheProduct")]
 
+        public async Task<ActionResult<Product>> UpdateTheProduct(int productId, Product updatedProduct)
+        {
+            try
+            {
+                var product = await _repository.UpdateTheProduct(productId, updatedProduct);
+                return Ok(product);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return StatusCode(500, "Internal Server Error");
+            }
+        }
+
+        
         [HttpDelete("{productId}")]
         public async Task<ActionResult> DeleteProduct(int productId)
         {

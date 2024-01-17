@@ -38,21 +38,29 @@ namespace BigBasketApplication
         }
         public async Task<Product> GetProductById(int productId)
         {
-            return await databaseContext.Products.FirstOrDefaultAsync(x => x.Id == productId);
-        }
-
-        public async Task PostNewProduct(Product product)
-        {
             try
             {
-                databaseContext.Products.Add(product);
-                await databaseContext.SaveChangesAsync();
-                
+                var product = await databaseContext.Products.FirstOrDefaultAsync(x => x.Id == productId);
+                if (product == null)
+                {
+                    throw new Exception($"Product with ID {productId} not found");
+                }
+                return product;
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine($"An error occurred while retrieving product with ID {productId}: {ex.Message}");
+                throw;
+
             }
+        }
+
+        public async Task<Product> PostNewProduct(Product product)
+        {
+           databaseContext.Products.Add(product);
+           await databaseContext.SaveChangesAsync();
+           return product;
+          
         }
 
 
@@ -68,6 +76,27 @@ namespace BigBasketApplication
             return product;
         }
 
+        public async Task<Product> UpdateTheProduct(int productId, Product updatedProduct)
+        {
+
+            var product = await databaseContext.Products.FirstOrDefaultAsync(x => x.Id == productId);
+            if(product != null)
+            {
+                product.Id = productId;
+                product.Name = updatedProduct.Name;
+                product.Price = updatedProduct.Price;
+                product.StockQuantity = updatedProduct.StockQuantity;
+                product.GstPercentage = updatedProduct.GstPercentage;
+                product.DiscountPercentage = updatedProduct.DiscountPercentage;
+                await databaseContext.SaveChangesAsync();
+                return product;
+            }
+            return null;
+            
+
+
+        }
+
         public async Task DeleteProduct(int productId)
         {
 
@@ -78,31 +107,31 @@ namespace BigBasketApplication
                 await databaseContext.SaveChangesAsync();
             }
         }
-        public async Task<Cart> AddToCart(int customerId, int productId,int quantity)
+        public async Task<Cart> AddToCart(int customerId, int productId, int quantity)
         {
             int available = GetProductAvailability(productId);
 
             if (available >= quantity)
             {
                 var cart = await databaseContext.Carts
-                    .Include(c => c.Items)
+                    .Include(c => c.CartItems)
                     .FirstOrDefaultAsync(c => c.CustomerId == customerId);
 
                 if (cart == null)
                 {
-                    cart = new Cart { CustomerId = customerId, Items = new List<CartItem>() };
+                    cart = new Cart { CustomerId = customerId, CartItems = new List<CartItem>() };
                     databaseContext.Carts.Add(cart);
                 }
 
-                var existingItem = cart.Items.FirstOrDefault(item => item.ProductId == productId);
+                var existingItem = cart.CartItems.FirstOrDefault(item => item.ProductId == productId);
 
                 if (existingItem == null)
                 {
-                    cart.Items.Add(new CartItem
+                    cart.CartItems.Add(new CartItem
                     {
                         ProductId = productId,
                         Quantity = quantity,
-                       /* ProductName = productName, */
+                        /* ProductName = productName, */
                     });
                 }
                 else
@@ -111,7 +140,7 @@ namespace BigBasketApplication
                 }
 
                 var product = await databaseContext.Products.FirstOrDefaultAsync(x => x.Id == productId);
-                if(product != null)
+                if (product != null)
                 {
                     product.StockQuantity -= quantity;
                 }
@@ -144,16 +173,16 @@ namespace BigBasketApplication
 
         public async Task<List<Cart>>GetAllProductsFromCart()
         {
-            return await databaseContext.Carts.Include(c => c.Items).ToListAsync();
+            return await databaseContext.Carts.Include(c => c.CartItems).ToListAsync();
         }
 
         public async Task<Order> GenerateBill(int customerId)
         {
            var cart = await databaseContext.Carts
-           .Include(c => c.Items)
+           .Include(c => c.CartItems)
            .FirstOrDefaultAsync(c => c.CustomerId == customerId);
 
-           if (cart == null || cart.Items.Count == 0)
+           if (cart == null || cart.CartItems.Count == 0)
            {
                return null;
            }
@@ -165,9 +194,9 @@ namespace BigBasketApplication
             {
                 CustomerId = customerId,
                 DelieverySlot = DateTime.Now.AddDays(2),
-                Items = new List<OrderItem>(),
+                OrderItems = new List<OrderItem>(),
             };
-            foreach (var cartItem in cart.Items)
+            foreach (var cartItem in cart.CartItems)
             {
                 double productPrice = await GetProductPrice(cartItem.ProductId);
                 int quantity = await GetProductQuantity(cartItem.ProductId);
@@ -189,8 +218,8 @@ namespace BigBasketApplication
                     Price = individualAmount,
                     Quantity = quantity,
                 };
-                finalOrder.Items.Add(orderItem);
-                databaseContext.CartItems.Remove(cartItem);
+                finalOrder.OrderItems.Add(orderItem);
+                cart.CartItems.Remove(cartItem);
             }
             finalOrder.TotalAmount = totalAmount;
             databaseContext.Orders.Add(finalOrder);

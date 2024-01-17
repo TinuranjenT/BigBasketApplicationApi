@@ -28,7 +28,7 @@ namespace BigBasketApplication.Controllers
             }
             
         }
-       
+
         [HttpPost("AddToCart")]
         public async Task<ActionResult<Cart>> AddToCart(Cart cart)
         {
@@ -36,8 +36,8 @@ namespace BigBasketApplication.Controllers
             {
                 var updatedCart = await _repository.AddToCart(
                 cart.CustomerId,
-                cart.Items.FirstOrDefault().ProductId, 
-                cart.Items.Sum(item => item.Quantity)
+                cart.CartItems.FirstOrDefault().ProductId,
+                cart.CartItems.Sum(item => item.Quantity)
                 );
                 if (updatedCart != null)
                 {
@@ -59,6 +59,7 @@ namespace BigBasketApplication.Controllers
                 return BadRequest($"Failed to add product to the cart: {ex.Message}");
             }
         }
+ 
 
         [HttpGet("GetAllProductsFromCart")]
         public async Task<ActionResult<IEnumerable<Order>>> GetAllProductsFromCart()

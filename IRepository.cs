@@ -8,7 +8,8 @@ namespace BigBasketApplication
         Task<List<Product>> GetAllProductsByAdmin();
         Task<Product> GetProductById(int productId);
         Task<Product> RefillStock(int productId, int quantityToBeAdd);
-        Task PostNewProduct(Product product);
+        Task<Product>PostNewProduct(Product product);
+        Task<Product> UpdateTheProduct(int productId, Product updatedProduct);
         Task DeleteProduct(int productId);
         /* Cart AddToCart(int customerId, int productId, int quantity);*/
 
